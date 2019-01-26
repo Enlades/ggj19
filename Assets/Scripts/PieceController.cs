@@ -23,6 +23,35 @@ public class PieceController : MonoBehaviour {
 
     public PieceController PieceBelow, PieceOnTop;
 
+    private Vector3 _targetScale;
+
+    protected virtual void Awake() {
+        _targetScale = transform.localScale;
+
+        transform.localScale = Vector3.zero;
+
+        StartCoroutine(FadeIn());
+    }
+
+    private IEnumerator FadeIn() {
+
+        AnimationCurve easeEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+        float baseTimer = 0.5f;
+        float timer = baseTimer;
+
+        while(timer > 0f) {
+
+            transform.localScale = Vector3.Lerp(Vector3.zero, _targetScale, easeEase.Evaluate((baseTimer - timer) / baseTimer));
+
+            timer -= Time.deltaTime;
+
+            yield return null;
+        }
+
+        transform.localScale = _targetScale;
+    }
+
     public void PlaceOnTop(PieceController piece) {
         if (PieceBelow != null) {
             PieceBelow.PieceOnTop = null;
@@ -84,7 +113,7 @@ public class PieceController : MonoBehaviour {
 
             smallPiece.GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(PType);
 
-            smallPiece.transform.localScale *= Random.Range(0.2f, 0.4f);
+            smallPiece.transform.localScale *= transform.localScale.magnitude * Random.Range(0.2f, 0.4f);
 
             GameController.Instance.StartCoroutine(ShrinkDestroy(smallPiece.transform));
 

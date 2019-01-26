@@ -58,6 +58,8 @@ public class GridGenerator : MonoBehaviour {
 
         public PieceController[,] Pieces;
 
+        public List<PieceController> PlayingPieces;
+
         public Grid(PieceController[,] pieces) {
             Pieces = pieces;
 
@@ -73,6 +75,8 @@ public class GridGenerator : MonoBehaviour {
                     Pieces[i, j].PType = PieceController.PieceType.Floor;
                 }
             }
+
+            PlayingPieces = new List<PieceController>();
         }
 
         public PieceController ProcessInput(Vector2Int position, Vector2Int direction) {
@@ -82,6 +86,16 @@ public class GridGenerator : MonoBehaviour {
             }
 
             return Pieces[position.x + direction.x, position.y + direction.y];
+        }
+
+        public void ClearPlayingPieces() {
+            for(int i = 0; i < PlayingPieces.Count; i++) {
+                PlayingPieces[i].Obliviate();
+            }
+        }
+
+        public void AddPlayingPiece(PieceController pieceController) {
+            PlayingPieces.Add(pieceController);
         }
     }
 }

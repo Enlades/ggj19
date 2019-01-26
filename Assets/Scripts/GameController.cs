@@ -18,7 +18,12 @@ public class GameController : MonoBehaviour {
 
     private PlayerPieceController _playerPiece;
 
+    private MeteorController _meteor;
+
+    private GameObject _currentCiv;
+
     private bool _playerMoving;
+    private bool _gameStarted;
 
     private void Awake() {
         Instance = this;
@@ -31,31 +36,40 @@ public class GameController : MonoBehaviour {
     }
 
     private void Start() {
-        _playerPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.PlayerPiece), Vector3.zero, Quaternion.identity)
-            .GetComponent<PlayerPieceController>();
+        //_playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Destroy);
 
-        _playerPiece.PlaceOnTop(_testGrid.Pieces[0, 0]);
+        ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 2)));
+        ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 2)));
+        ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(1, 2)));
+        ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 1)));
 
-        _playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Destroy);
-
-        CreatePieceOnGrid(new Vector2Int(2, 2));
-        CreatePieceOnGrid(new Vector2Int(2, 2));
-        //CreatePieceOnGrid(new Vector2Int(3, 2));
-        CreatePieceOnGrid(new Vector2Int(1, 2));
-        CreatePieceOnGrid(new Vector2Int(2, 1));
-        //CreatePieceOnGrid(new Vector2Int(2, 3));
+        PlaceCivsOnPiece(ActiveGrid.Pieces[1,1]);
     }
 
-    private void CreatePieceOnGrid(Vector2Int position) {
+    private PieceController CreatePieceOnGrid(Vector2Int position) {
         PieceController testPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.FloorPiece), Vector3.zero, Quaternion.identity)
             .GetComponent<PieceController>();
 
         testPiece.PlaceOnTop(_testGrid.Pieces[position.x, position.y]);
+
+        return testPiece;
     }
 
     private void Update() {
         int x = (int)Input.GetAxisRaw("Horizontal");
         int z = (int)Input.GetAxisRaw("Vertical");
+
+        if (Input.GetKeyDown(KeyCode.G)) {
+            if(_meteor == null) {
+                _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
+
+                StartCoroutine(MeteorPause());
+            }
+            return;
+        }
+
+        if (!_gameStarted)
+            return;
 
         if (Input.anyKeyDown) {
             if (_playerMoving)
@@ -81,9 +95,29 @@ public class GameController : MonoBehaviour {
 
                 _playerPiece.PlaceOnTop(_testGrid.Pieces[0, 0]);
 
-                _playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Destroy);
+                //_playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Destroy);
             }
         }
+    }
+
+    private void PlaceCivsOnPiece(PieceController pieceController) {
+        _currentCiv = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.PlayerCivs_Three));
+
+        _currentCiv.transform.position = pieceController.transform.position + _currentCiv.transform.GetChild(0).localScale.x * Vector3.up;
+
+        _currentCiv.transform.position += Vector3.up * 0.9f + Vector3.back * 0.6f + Vector3.left * 0.2f;
+    }
+
+    public static void ClearActiveGrid() {
+        Instance.ActiveGrid.ClearPlayingPieces();
+
+        Instance.StartCoroutine(Instance.DelayedPlayerStart());
+
+        for (int i = 0; i < Instance._currentCiv.transform.childCount; i++) {
+            Instance._currentCiv.transform.GetChild(i).GetComponent<PieceController>().Obliviate();
+        }
+
+        Destroy(Instance._currentCiv);
     }
 
     private IEnumerator AnimatePlayerMovement(PieceController pieceController) {
@@ -122,5 +156,50 @@ public class GameController : MonoBehaviour {
         _playerPiece.transform.localScale = Vector3.one;
 
         _playerMoving = false;
+    }
+
+    private IEnumerator DelayedPlayerStart() {
+        yield return new WaitForSeconds(1f);
+
+        _playerPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.PlayerPiece), Vector3.zero, Quaternion.identity)
+    .GetComponent<PlayerPieceController>();
+
+        _playerPiece.PlaceOnTop(ActiveGrid.Pieces[0, 0]);
+    }
+
+    private IEnumerator MeteorPause() {
+        yield return new WaitForSeconds(0.9f);
+
+        GameObject manualPivot = new GameObject("ManualPivot");
+
+        manualPivot.transform.position = CameraController.Instance.Pivot;
+
+        CameraController.Instance.ManualPivot = manualPivot.transform;
+
+        _meteor.PauseMeteor();
+
+        for (int i = 0; i < Instance._currentCiv.transform.childCount; i++) {
+            Instance._currentCiv.transform.GetChild(i).GetComponent<PlayerCivController>().Pause = true;
+        }
+
+        while (Vector3.Distance(manualPivot.transform.position, _meteor.transform.position) > 0.1f) {
+            manualPivot.transform.position = Vector3.MoveTowards(manualPivot.transform.position, _meteor.transform.position, 0.5f);
+
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(2f);
+
+        _meteor.ResumeMeteor();
+
+        Vector3 targetPosition = ActiveGrid.CenterPosition + Vector3.up * 0.8f;
+
+        while (Vector3.Distance(manualPivot.transform.position, targetPosition) > 0.1f) {
+            manualPivot.transform.position = Vector3.MoveTowards(manualPivot.transform.position, targetPosition, 0.5f);
+
+            yield return null;
+        }
+
+        Destroy(manualPivot);
     }
 }

@@ -4,12 +4,19 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour {
 
+    public static CameraController Instance;
+
     public Transform CameraLeftmost, CameraRightmost;
+
+    public Transform ManualPivot;
 
     public Vector3 Pivot {
         get {
             if (GameController.Instance == null || GameController.Instance.ActiveGrid == null)
                 return Vector3.zero;
+
+            if (ManualPivot != null)
+                return ManualPivot.position;
 
             return GameController.Instance.ActiveGrid.CenterPosition + Vector3.up * 0.8f;
         }
@@ -18,13 +25,15 @@ public class CameraController : MonoBehaviour {
     private Vector3 _startPosition;
 
     private void Awake() {
+        Instance = this;
+
         _startPosition = transform.position;
     }
 
     private void Update() {
 
         if (Input.GetKeyDown(KeyCode.P)) {
-            StartCoroutine(CameraShake());
+            ShakeCamera();
         }
 
         if (Input.GetKey(KeyCode.E)) {
@@ -36,6 +45,10 @@ public class CameraController : MonoBehaviour {
         }
 
         transform.LookAt(Pivot);
+    }
+
+    public static void ShakeCamera() {
+        Instance.StartCoroutine(Instance.CameraShake());
     }
 
     private IEnumerator CameraShake() {

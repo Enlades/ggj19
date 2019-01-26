@@ -50,7 +50,7 @@ public class PlayerPieceController : PieceController {
 
             smallPiece.GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(PPieceType);
 
-            smallPiece.transform.localScale *= Random.Range(0.2f, 0.4f);
+            smallPiece.transform.localScale *= transform.localScale.magnitude * Random.Range(0.2f, 0.4f);
 
             GameController.Instance.StartCoroutine(ShrinkDestroy(smallPiece.transform));
 
