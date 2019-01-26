@@ -60,6 +60,8 @@ public class GridGenerator : MonoBehaviour {
 
         public List<PieceController> PlayingPieces;
 
+        public GridSolution GSolution;
+
         public Grid(PieceController[,] pieces) {
             Pieces = pieces;
 
@@ -92,10 +94,51 @@ public class GridGenerator : MonoBehaviour {
             for(int i = 0; i < PlayingPieces.Count; i++) {
                 PlayingPieces[i].Obliviate();
             }
+
+            PlayingPieces.Clear();
         }
 
-        public void AddPlayingPiece(PieceController pieceController) {
+        public PieceController AddPlayingPiece(PieceController pieceController) {
             PlayingPieces.Add(pieceController);
+
+            return pieceController;
+        }
+
+        public bool CheckComplete() {
+            return GridSolution.CheckSolution(this, GSolution);
+        }
+    }
+
+    public class GridSolution {
+
+        private List<PieceController.PieceAbsolutePosition> _pieceAbsolutePositions;
+
+        public GridSolution(List<PieceController> playingPieces) {
+            _pieceAbsolutePositions = new List<PieceController.PieceAbsolutePosition>();
+            
+            for(int i = 0; i < playingPieces.Count; i++) {
+                _pieceAbsolutePositions.Add(playingPieces[i].PAbsolutePosition);
+            }
+        }
+
+        public static bool CheckSolution(Grid grid, GridSolution gridSolution) {
+            if (grid.PlayingPieces.Count != gridSolution._pieceAbsolutePositions.Count) {
+                return false;
+            }
+
+            for(int i = 0; i < grid.PlayingPieces.Count; i++) {
+                bool contains = false;
+                for(int j = 0; j < gridSolution._pieceAbsolutePositions.Count; j++) {
+                    if (gridSolution._pieceAbsolutePositions[j].Compare(grid.PlayingPieces[i].PAbsolutePosition)) {
+                        contains = true;
+                    }
+                }
+
+                if (!contains)
+                    return false;
+            }
+
+            return true;
         }
     }
 }

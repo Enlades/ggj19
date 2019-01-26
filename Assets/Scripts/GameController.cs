@@ -1,8 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameController : MonoBehaviour {
+
+    public GameObject ThisIsYouText, ThisIsYouArrow, YourHomeText, YourHomeArrow, MeteorText, MeteorArrow, RebuildText;
+
+    public GameObject FirstLevelPlayer;
 
     public static GameController Instance;
 
@@ -10,11 +15,9 @@ public class GameController : MonoBehaviour {
 
     public GridGenerator.Grid ActiveGrid;
 
+    public int GridLevel;
+
     private GridGenerator _gridGenerator;
-
-    private GridGenerator.Grid _testGrid;
-
-    private GridGenerator.Grid[] _levelGrids;
 
     private PlayerPieceController _playerPiece;
 
@@ -24,33 +27,65 @@ public class GameController : MonoBehaviour {
 
     private bool _playerMoving;
     private bool _gameStarted;
+    private bool _firstPlay;
 
     private void Awake() {
         Instance = this;
 
+        _firstPlay = true;
+
         _gridGenerator = GetComponent<GridGenerator>();
 
-        _testGrid = _gridGenerator.GenerateGrid(3, 3);
+        if (GridLevel == 1) {
+            
+        } else if (GridLevel == 2) {
 
-        ActiveGrid = _testGrid;
+        } else if (GridLevel == 3) {
+
+        }
     }
 
     private void Start() {
         //_playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Destroy);
 
-        ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 2)));
-        ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 2)));
-        ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(1, 2)));
-        ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 1)));
+        List<PieceController> solutionPieces = new List<PieceController>();
 
-        PlaceCivsOnPiece(ActiveGrid.Pieces[1,1]);
+        if (GridLevel == 1) {
+            StartCoroutine(FirstLevelStart());
+        } else if (GridLevel == 2) {
+            _firstPlay = false;
+
+            ActiveGrid = _gridGenerator.GenerateGrid(4, 4);
+
+            ActiveGrid.GSolution = new GridGenerator.GridSolution(solutionPieces);
+
+            PlaceCivsOnPiece(ActiveGrid.Pieces[1, 1]);
+
+            _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
+
+            StartCoroutine(MeteorPause());
+
+            _gameStarted = false;
+        } else if (GridLevel == 3) {
+            _firstPlay = false;
+
+            ActiveGrid.GSolution = new GridGenerator.GridSolution(solutionPieces);
+
+            PlaceCivsOnPiece(ActiveGrid.Pieces[1, 1]);
+
+            _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
+
+            StartCoroutine(MeteorPause());
+
+            _gameStarted = false;
+        }
     }
 
     private PieceController CreatePieceOnGrid(Vector2Int position) {
         PieceController testPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.FloorPiece), Vector3.zero, Quaternion.identity)
             .GetComponent<PieceController>();
 
-        testPiece.PlaceOnTop(_testGrid.Pieces[position.x, position.y]);
+        testPiece.PlaceOnTop(ActiveGrid.Pieces[position.x, position.y]);
 
         return testPiece;
     }
@@ -64,9 +99,16 @@ public class GameController : MonoBehaviour {
                 _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
 
                 StartCoroutine(MeteorPause());
+
+                _gameStarted = false;
             }
             return;
         }
+
+        if (Input.GetKeyDown(KeyCode.R)) {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
 
         if (!_gameStarted)
             return;
@@ -76,7 +118,7 @@ public class GameController : MonoBehaviour {
                 return;
 
             if (Mathf.Abs(x) > 0f || Mathf.Abs(z) > 0f) {
-                PieceController nextPiece = _testGrid.ProcessInput(_playerPiece.GridPosition, new Vector2Int(x, z));
+                PieceController nextPiece = ActiveGrid.ProcessInput(_playerPiece.GridPosition, new Vector2Int(x, z));
 
                 if (nextPiece != null) {
                     StartCoroutine(AnimatePlayerMovement(nextPiece));
@@ -85,15 +127,28 @@ public class GameController : MonoBehaviour {
 
             if (Input.GetKeyDown(KeyCode.Space)) {
                 if(_playerPiece.PPieceType == PlayerPieceController.PlayerPieceType.Destroy) {
-                    _playerPiece.DestroyAction();
+                    PieceController destroyedPiece = _playerPiece.DestroyAction();
+
+                    if (destroyedPiece != null) {
+                        ActiveGrid.PlayingPieces.Remove(destroyedPiece);
+                    }
+
                 }else if(_playerPiece.PPieceType == PlayerPieceController.PlayerPieceType.Normal) {
                     _playerPiece.ConvertPieceType(PieceController.PieceType.Normal);
+                    ActiveGrid.AddPlayingPiece(_playerPiece);
                 }
 
-                _playerPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.PlayerPiece), Vector3.zero, Quaternion.identity)
-                    .GetComponent<PlayerPieceController>();
+                if (ActiveGrid.CheckComplete()) {
+                    PlaceCivsOnPiece(ActiveGrid.Pieces[1, 1]);
 
-                _playerPiece.PlaceOnTop(_testGrid.Pieces[0, 0]);
+                    _gameStarted = false;
+                } else {
+                    _playerPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.PlayerPiece), Vector3.zero, Quaternion.identity)
+                        .GetComponent<PlayerPieceController>();
+
+
+                    _playerPiece.PlaceOnTop(ActiveGrid.Pieces[0, 0]);
+                }
 
                 //_playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Destroy);
             }
@@ -109,9 +164,16 @@ public class GameController : MonoBehaviour {
     }
 
     public static void ClearActiveGrid() {
+        if (Instance._playerPiece) {
+            Instance._playerPiece.Obliviate();
+        }
+
         Instance.ActiveGrid.ClearPlayingPieces();
 
         Instance.StartCoroutine(Instance.DelayedPlayerStart());
+
+        if (Instance._currentCiv == null)
+            return;
 
         for (int i = 0; i < Instance._currentCiv.transform.childCount; i++) {
             Instance._currentCiv.transform.GetChild(i).GetComponent<PieceController>().Obliviate();
@@ -172,34 +234,129 @@ public class GameController : MonoBehaviour {
 
         GameObject manualPivot = new GameObject("ManualPivot");
 
-        manualPivot.transform.position = CameraController.Instance.Pivot;
+        if (_firstPlay) {
 
-        CameraController.Instance.ManualPivot = manualPivot.transform;
+            manualPivot.transform.position = CameraController.Instance.Pivot;
 
-        _meteor.PauseMeteor();
+            CameraController.Instance.ManualPivot = manualPivot.transform;
 
-        for (int i = 0; i < Instance._currentCiv.transform.childCount; i++) {
-            Instance._currentCiv.transform.GetChild(i).GetComponent<PlayerCivController>().Pause = true;
+            _meteor.PauseMeteor();
+
+            MeteorArrow.SetActive(true);
+            MeteorText.SetActive(true);
+
+            for (int i = 0; i < Instance._currentCiv.transform.childCount; i++) {
+                Instance._currentCiv.transform.GetChild(i).GetComponent<PlayerCivController>().Pause = true;
+            }
+
+            while (Vector3.Distance(manualPivot.transform.position, _meteor.transform.position) > 0.1f) {
+                manualPivot.transform.position = Vector3.MoveTowards(manualPivot.transform.position, _meteor.transform.position, 0.5f);
+
+                yield return null;
+            }
+
         }
 
-        while (Vector3.Distance(manualPivot.transform.position, _meteor.transform.position) > 0.1f) {
-            manualPivot.transform.position = Vector3.MoveTowards(manualPivot.transform.position, _meteor.transform.position, 0.5f);
+        yield return new WaitForSeconds(1.5f);
 
-            yield return null;
+        if (_firstPlay) {
+            MeteorArrow.GetComponent<Animator>().SetTrigger("Switch");
+            MeteorText.GetComponent<Animator>().SetTrigger("Switch");
+
+            yield return new WaitForSeconds(0.5f);
+
+            MeteorArrow.SetActive(false);
+            MeteorText.SetActive(false);
+
+            _meteor.ResumeMeteor();
+
+            Vector3 targetPosition = ActiveGrid.CenterPosition + Vector3.up * 0.8f;
+
+            while (Vector3.Distance(manualPivot.transform.position, targetPosition) > 0.1f) {
+                manualPivot.transform.position = Vector3.MoveTowards(manualPivot.transform.position, targetPosition, 0.5f);
+
+                yield return null;
+            }
+
+            Destroy(manualPivot);
         }
+
+        if (_firstPlay) {
+            RebuildText.SetActive(true);
+
+            yield return new WaitForSeconds(0.9f);
+        }
+
+        _gameStarted = true;
+
+        _firstPlay = false;
 
         yield return new WaitForSeconds(2f);
 
-        _meteor.ResumeMeteor();
-
-        Vector3 targetPosition = ActiveGrid.CenterPosition + Vector3.up * 0.8f;
-
-        while (Vector3.Distance(manualPivot.transform.position, targetPosition) > 0.1f) {
-            manualPivot.transform.position = Vector3.MoveTowards(manualPivot.transform.position, targetPosition, 0.5f);
-
-            yield return null;
+        if (_firstPlay) {
+            RebuildText.GetComponent<Animator>().SetTrigger("Switch");
+        } else {
+            Destroy(manualPivot);
         }
 
-        Destroy(manualPivot);
+        yield return new WaitForSeconds(0.5f);
+
+        if (_firstPlay) {
+            RebuildText.SetActive(false);
+        }
+    }
+
+    private IEnumerator FirstLevelStart() {
+
+        yield return new WaitForSeconds(0.5f);
+
+        FirstLevelPlayer.SetActive(true);
+
+        ThisIsYouArrow.SetActive(true);
+        ThisIsYouText.SetActive(true);
+
+        yield return new WaitForSeconds(1.5f);
+
+        FirstLevelPlayer.GetComponent<PieceController>().Obliviate();
+
+        ThisIsYouArrow.GetComponent<Animator>().SetTrigger("Switch");
+        ThisIsYouText.GetComponent<Animator>().SetTrigger("Switch");
+
+        yield return new WaitForSeconds(0.5f);
+
+        ThisIsYouArrow.SetActive(false);
+        ThisIsYouText.SetActive(false);
+
+        yield return new WaitForSeconds(0.8f);
+
+        YourHomeArrow.SetActive(true);
+        YourHomeText.SetActive(true);
+
+        List<PieceController> solutionPieces = new List<PieceController>();
+
+        ActiveGrid = _gridGenerator.GenerateGrid(3, 3);
+
+        solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 2))));
+        solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 2))));
+        solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(1, 2))));
+        solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 1))));
+
+        ActiveGrid.GSolution = new GridGenerator.GridSolution(solutionPieces);
+
+        PlaceCivsOnPiece(ActiveGrid.Pieces[1, 1]);
+
+        yield return new WaitForSeconds(1f);
+
+        YourHomeArrow.GetComponent<Animator>().SetTrigger("Switch");
+        YourHomeText.GetComponent<Animator>().SetTrigger("Switch");
+
+        yield return new WaitForSeconds(0.5f);
+
+        YourHomeArrow.SetActive(false);
+        YourHomeText.SetActive(false);
+
+        _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
+
+        StartCoroutine(MeteorPause());
     }
 }

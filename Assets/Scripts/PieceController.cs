@@ -21,6 +21,26 @@ public class PieceController : MonoBehaviour {
 
     public Vector2Int GridPosition;
 
+    public int Level {
+        get {
+            int counter = 0;
+            PieceController pieceControllerRef = PieceBelow;
+
+            while(pieceControllerRef != null) {
+                counter++;
+                pieceControllerRef = pieceControllerRef.PieceBelow;
+            }
+
+            return counter;
+        }
+    }
+
+    public PieceAbsolutePosition PAbsolutePosition {
+        get {
+            return new PieceAbsolutePosition(GridPosition, Level);
+        }
+    }
+
     public PieceController PieceBelow, PieceOnTop;
 
     private Vector3 _targetScale;
@@ -69,15 +89,17 @@ public class PieceController : MonoBehaviour {
         PieceBelow = piece;
     }
 
-    public void DestroyAction() {
+    public PieceController DestroyAction() {
         Obliviate();
 
         if (PieceBelow.PType == PieceType.Floor) {
             PieceBelow.PieceOnTop = null;
-            return;
+            return null;
         }
 
         PieceBelow.Obliviate();
+
+        return PieceBelow;
     }
 
     public void ConvertPieceType(PieceType pieceType) {
@@ -139,5 +161,20 @@ public class PieceController : MonoBehaviour {
         }
 
         pieceTransform.localScale = Vector3.zero;
+    }
+
+    public class PieceAbsolutePosition {
+        public Vector2Int position;
+        public int Level;
+
+        public PieceAbsolutePosition(Vector2Int vector2Int, int level) {
+            position = vector2Int;
+            Level = level;
+        }
+
+        public bool Compare(PieceAbsolutePosition pieceAbsolutePosition) {
+            return Level == pieceAbsolutePosition.Level
+                        && position == pieceAbsolutePosition.position;
+        }
     }
 }
