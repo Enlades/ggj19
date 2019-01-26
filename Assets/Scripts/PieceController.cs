@@ -7,7 +7,8 @@ public class PieceController : MonoBehaviour {
     public enum PieceType {
         Player,
         Normal,
-        Floor
+        Floor,
+        MeteorResidue
     }
 
     public bool HasPiece {
@@ -42,6 +43,8 @@ public class PieceController : MonoBehaviour {
     }
 
     public PieceController PieceBelow, PieceOnTop;
+
+    public bool ControlsInverted;
 
     private Vector3 _targetScale;
 
@@ -105,13 +108,23 @@ public class PieceController : MonoBehaviour {
     public void ConvertPieceType(PieceType pieceType) {
         switch (pieceType) {
             case PieceType.Normal: {
+
                     PType = pieceType;
                     GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(MaterialManager.MaterialType.Floor);
+
+                    if (Level >= 5) {
+                        GameController.UnAuthorizedMeteor();
+                    }
                     break;
                 }
             case PieceType.Player: {
                     PType = pieceType;
                     GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(MaterialManager.MaterialType.Player);
+                    break;
+                }
+            case PieceType.MeteorResidue: {
+                    PType = pieceType;
+                    GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(MaterialManager.MaterialType.MeteorResidue);
                     break;
                 }
             default: {

@@ -21,9 +21,13 @@ public class GameController : MonoBehaviour {
 
     private PlayerPieceController _playerPiece;
 
+    private PlayerPieceController _playerMirrorPiece;
+
     private MeteorController _meteor;
 
     private GameObject _currentCiv;
+
+    private int _cubesUsed;
 
     private bool _playerMoving;
     private bool _gameStarted;
@@ -35,6 +39,8 @@ public class GameController : MonoBehaviour {
         _firstPlay = true;
 
         _gridGenerator = GetComponent<GridGenerator>();
+
+        _cubesUsed = 0;
 
         if (GridLevel == 1) {
             
@@ -57,11 +63,14 @@ public class GameController : MonoBehaviour {
 
             ActiveGrid = _gridGenerator.GenerateGrid(4, 4);
 
+            solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(1, 3))));
+            solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(3, 3))));
+            solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 3))));
+            solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(3, 2))));
+
             ActiveGrid.GSolution = new GridGenerator.GridSolution(solutionPieces);
 
             PlaceCivsOnPiece(ActiveGrid.Pieces[1, 1]);
-
-            _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
 
             StartCoroutine(MeteorPause());
 
@@ -69,11 +78,16 @@ public class GameController : MonoBehaviour {
         } else if (GridLevel == 3) {
             _firstPlay = false;
 
+            ActiveGrid = _gridGenerator.GenerateGrid(5, 5);
+
+            solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(1, 3))));
+            solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(3, 3))));
+            solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(2, 3))));
+            solutionPieces.Add(ActiveGrid.AddPlayingPiece(CreatePieceOnGrid(new Vector2Int(3, 2))));
+
             ActiveGrid.GSolution = new GridGenerator.GridSolution(solutionPieces);
 
             PlaceCivsOnPiece(ActiveGrid.Pieces[1, 1]);
-
-            _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
 
             StartCoroutine(MeteorPause());
 
@@ -95,7 +109,7 @@ public class GameController : MonoBehaviour {
         int z = (int)Input.GetAxisRaw("Vertical");
 
         if (Input.GetKeyDown(KeyCode.G)) {
-            if(_meteor == null) {
+            if (_meteor == null) {
                 _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
 
                 StartCoroutine(MeteorPause());
@@ -118,10 +132,26 @@ public class GameController : MonoBehaviour {
                 return;
 
             if (Mathf.Abs(x) > 0f || Mathf.Abs(z) > 0f) {
-                PieceController nextPiece = ActiveGrid.ProcessInput(_playerPiece.GridPosition, new Vector2Int(x, z));
+                if(_playerPiece.PPieceType == PlayerPieceController.PlayerPieceType.Mirror) {
+                    PieceController nextPiece = ActiveGrid.ProcessInput(_playerPiece.GridPosition, new Vector2Int(x, z));
 
-                if (nextPiece != null) {
-                    StartCoroutine(AnimatePlayerMovement(nextPiece));
+                    if (nextPiece != null) {
+                        StartCoroutine(AnimatePlayerMovement(_playerPiece, nextPiece));
+                    }
+
+                    nextPiece = ActiveGrid.ProcessInput(_playerMirrorPiece.GridPosition, new Vector2Int(x * -1, z * -1));
+
+                    if (nextPiece != null) {
+                        StartCoroutine(AnimatePlayerMovement(_playerMirrorPiece, nextPiece));
+                    }
+
+
+                } else {
+                    PieceController nextPiece = ActiveGrid.ProcessInput(_playerPiece.GridPosition, new Vector2Int(x, z));
+
+                    if (nextPiece != null) {
+                        StartCoroutine(AnimatePlayerMovement(_playerPiece, nextPiece));
+                    }
                 }
             }
 
@@ -136,7 +166,15 @@ public class GameController : MonoBehaviour {
                 }else if(_playerPiece.PPieceType == PlayerPieceController.PlayerPieceType.Normal) {
                     _playerPiece.ConvertPieceType(PieceController.PieceType.Normal);
                     ActiveGrid.AddPlayingPiece(_playerPiece);
+                } else if(_playerPiece.PPieceType == PlayerPieceController.PlayerPieceType.Mirror) {
+                    _playerPiece.ConvertPieceType(PieceController.PieceType.Normal);
+                    ActiveGrid.AddPlayingPiece(_playerPiece);
+
+                    _playerMirrorPiece.ConvertPieceType(PieceController.PieceType.Normal);
+                    ActiveGrid.AddPlayingPiece(_playerMirrorPiece);
                 }
+
+                _cubesUsed++;
 
                 if (ActiveGrid.CheckComplete()) {
                     PlaceCivsOnPiece(ActiveGrid.Pieces[1, 1]);
@@ -144,8 +182,13 @@ public class GameController : MonoBehaviour {
                     _gameStarted = false;
                 } else {
                     _playerPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.PlayerPiece), Vector3.zero, Quaternion.identity)
-                        .GetComponent<PlayerPieceController>();
+    .GetComponent<PlayerPieceController>();
 
+                    if (GridLevel == 3) {
+                        if(_cubesUsed == 1) {
+                            _playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Destroy);
+                        }
+                    }
 
                     _playerPiece.PlaceOnTop(ActiveGrid.Pieces[0, 0]);
                 }
@@ -182,7 +225,17 @@ public class GameController : MonoBehaviour {
         Destroy(Instance._currentCiv);
     }
 
-    private IEnumerator AnimatePlayerMovement(PieceController pieceController) {
+    public static void UnAuthorizedMeteor() {
+        if (Instance._meteor == null) {
+            Instance._meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
+
+            Instance.StartCoroutine(Instance.MeteorPause());
+
+            Instance._gameStarted = false;
+        }
+    }
+
+    private IEnumerator AnimatePlayerMovement(PlayerPieceController playerPieceController, PieceController pieceController) {
         _playerMoving = true;
 
         AnimationCurve easeEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
@@ -193,29 +246,29 @@ public class GameController : MonoBehaviour {
 
         while (timer > 0f) {
 
-            _playerPiece.transform.localScale = Vector3.Lerp(Vector3.one, Vector3.zero, easeEase.Evaluate((shrinkTime - timer) / shrinkTime));
+            playerPieceController.transform.localScale = Vector3.Lerp(Vector3.one, Vector3.zero, easeEase.Evaluate((shrinkTime - timer) / shrinkTime));
 
             timer -= Time.deltaTime;
 
             yield return null;
         }
 
-        _playerPiece.transform.localScale = Vector3.zero;
+        playerPieceController.transform.localScale = Vector3.zero;
 
-        _playerPiece.PlaceOnTop(pieceController);
+        playerPieceController.PlaceOnTop(pieceController);
 
         timer = expandTime;
 
         while (timer > 0f) {
 
-            _playerPiece.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, easeEase.Evaluate((expandTime - timer) / expandTime));
+            playerPieceController.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, easeEase.Evaluate((expandTime - timer) / expandTime));
 
             timer -= Time.deltaTime;
 
             yield return null;
         }
 
-        _playerPiece.transform.localScale = Vector3.one;
+        playerPieceController.transform.localScale = Vector3.one;
 
         _playerMoving = false;
     }
@@ -226,10 +279,31 @@ public class GameController : MonoBehaviour {
         _playerPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.PlayerPiece), Vector3.zero, Quaternion.identity)
     .GetComponent<PlayerPieceController>();
 
+        if (GridLevel == 2) {
+            _playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Destroy);
+        } else if(GridLevel == 3) {
+            _playerPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Mirror);
+
+            _playerMirrorPiece = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.PlayerPiece), Vector3.zero, Quaternion.identity)
+.GetComponent<PlayerPieceController>();
+
+            _playerMirrorPiece.ConvertPlayerPieceType(PlayerPieceController.PlayerPieceType.Mirror);
+
+            _playerMirrorPiece.PlaceOnTop(ActiveGrid.Pieces[4, 4]);
+        }
+
         _playerPiece.PlaceOnTop(ActiveGrid.Pieces[0, 0]);
     }
 
     private IEnumerator MeteorPause() {
+
+        if(GridLevel != 1) {
+
+            yield return new WaitForSeconds(3f);
+
+            _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
+        }
+
         yield return new WaitForSeconds(0.9f);
 
         GameObject manualPivot = new GameObject("ManualPivot");
@@ -257,7 +331,13 @@ public class GameController : MonoBehaviour {
 
         }
 
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(0.5f);
+
+        if (GridLevel == 2) {
+            CreatePieceOnGrid(new Vector2Int(2, 2)).ConvertPieceType(PieceController.PieceType.MeteorResidue);
+        }
+
+        yield return new WaitForSeconds(1f);
 
         if (_firstPlay) {
             MeteorArrow.GetComponent<Animator>().SetTrigger("Switch");

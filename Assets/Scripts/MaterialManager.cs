@@ -7,17 +7,21 @@ public class MaterialManager : MonoBehaviour {
     public enum MaterialType {
         Player,
         PlayerDestroy,
-        Floor
+        PlayerMirror,
+        Floor,
+        MeteorResidue,
     }
 
     public static MaterialManager Instance;
 
-    private Material _playerMat, _playerDestroyMat, _floorMat;
+    private Material _playerMat, _playerDestroyMat, _floorMat, _meteorResidueMat, _playerMirrorMat;
 
     private void Awake() {
         _playerMat = Resources.Load("Materials/PlayerMat") as Material;
         _floorMat = Resources.Load("Materials/FloorMat") as Material;
         _playerDestroyMat = Resources.Load("Materials/PlayerDestroyMat") as Material;
+        _meteorResidueMat = Resources.Load("Materials/MeteorResidueMat") as Material;
+        _playerMirrorMat = Resources.Load("Materials/PlayerMirrorMat") as Material;
 
         Instance = this;
     }
@@ -33,6 +37,12 @@ public class MaterialManager : MonoBehaviour {
             case MaterialType.PlayerDestroy: {
                     return Instance._playerDestroyMat;
                 }
+            case MaterialType.MeteorResidue: {
+                    return Instance._meteorResidueMat;
+                }
+            case MaterialType.PlayerMirror: {
+                    return Instance._playerMirrorMat;
+                }
             default: {
                     return null;
                 }
@@ -46,6 +56,9 @@ public class MaterialManager : MonoBehaviour {
                 }
             case PlayerPieceController.PlayerPieceType.Normal: {
                     return Instance._playerMat;
+                }
+            case PlayerPieceController.PlayerPieceType.Mirror: {
+                    return Instance._playerMirrorMat;
                 }
             default: {
                     return null;
@@ -63,6 +76,9 @@ public class MaterialManager : MonoBehaviour {
                 }
             case PieceController.PieceType.Floor: {
                     return Instance._floorMat;
+                }
+            case PieceController.PieceType.MeteorResidue: {
+                    return Instance._meteorResidueMat;
                 }
             default: {
                     return null;

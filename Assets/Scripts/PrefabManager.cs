@@ -8,13 +8,15 @@ public class PrefabManager : MonoBehaviour {
         FloorPiece,
         PlayerPiece,
         PlayerDestroyPiece,
+        PlayerMirrorPiece,
         Meteor,
-        PlayerCivs_Three
+        PlayerCivs_Three,
+        MeteorResidue,
     }
 
     public static PrefabManager Instance;
 
-    private GameObject _floorPiece, _playerPiece, _playerDestroyPiece, _meteor, _playerCivsThree;
+    private GameObject _floorPiece, _playerPiece, _playerDestroyPiece, _meteor, _playerCivsThree, _meteorResidue, _playerMirrorPiece;
 
     private void Awake() {
         Instance = this;
@@ -24,6 +26,8 @@ public class PrefabManager : MonoBehaviour {
         _playerDestroyPiece = Resources.Load("Prefabs/PlayerDestroyPiece") as GameObject;
         _meteor = Resources.Load("Prefabs/Meteor") as GameObject;
         _playerCivsThree = Resources.Load("Prefabs/PlayerCiv_Three") as GameObject;
+        _meteorResidue = Resources.Load("Prefabs/MeteorResidue") as GameObject;
+        _playerMirrorPiece = Resources.Load("Prefabs/PlayerMirrorPiece") as GameObject;
     }
 
     public static GameObject GetPrefab(PrefabType prefabType) {
@@ -42,6 +46,12 @@ public class PrefabManager : MonoBehaviour {
                 }
             case PrefabType.PlayerCivs_Three: {
                     return Instance._playerCivsThree;
+                }
+            case PrefabType.MeteorResidue: {
+                    return Instance._meteorResidue;
+                }
+            case PrefabType.PlayerMirrorPiece: {
+                    return Instance._playerMirrorPiece;
                 }
             default: {
                     return null;

@@ -6,7 +6,8 @@ public class PlayerPieceController : PieceController {
 
     public enum PlayerPieceType {
         Normal,
-        Destroy
+        Destroy,
+        Mirror
     }
 
 
@@ -29,6 +30,11 @@ public class PlayerPieceController : PieceController {
                     GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(MaterialManager.MaterialType.PlayerDestroy);
                     break;
                 }
+            case PlayerPieceType.Mirror: {
+                    PPieceType = playerPieceType;
+                    GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(MaterialManager.MaterialType.PlayerMirror);
+                    break;
+                }
             default: {
                     break;
                 }
@@ -48,7 +54,11 @@ public class PlayerPieceController : PieceController {
 
             rb.AddExplosionForce(200f, transform.position, 10f);
 
-            smallPiece.GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(PPieceType);
+            if(PType == PieceType.Normal) {
+                smallPiece.GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(PType);
+            } else {
+                smallPiece.GetComponent<MeshRenderer>().material = MaterialManager.GetMaterial(PPieceType);
+            }
 
             smallPiece.transform.localScale *= transform.localScale.magnitude * Random.Range(0.2f, 0.4f);
 
