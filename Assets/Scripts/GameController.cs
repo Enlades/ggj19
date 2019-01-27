@@ -231,8 +231,6 @@ public class GameController : MonoBehaviour {
 
     public static void UnAuthorizedMeteor() {
         if (Instance._meteor == null) {
-            Instance._meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
-
             Instance.StartCoroutine(Instance.MeteorPause());
 
             Instance._gameStarted = false;

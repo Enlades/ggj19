@@ -173,7 +173,8 @@ public class PieceController : MonoBehaviour {
             yield return null;
         }
 
-        pieceTransform.localScale = Vector3.zero;
+        if (pieceTransform)
+            pieceTransform.localScale = Vector3.zero;
     }
 
     public class PieceAbsolutePosition {

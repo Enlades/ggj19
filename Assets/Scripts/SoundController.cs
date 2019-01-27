@@ -16,4 +16,10 @@ public class SoundController : MonoBehaviour {
 
         DontDestroyOnLoad(gameObject);
     }
+
+    private void Update() {
+        if (Input.GetKeyDown(KeyCode.M)) {
+            GetComponent<AudioSource>().mute = !GetComponent<AudioSource>().mute;
+        }
+    }
 }
