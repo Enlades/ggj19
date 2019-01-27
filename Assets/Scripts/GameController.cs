@@ -1,10 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 public class GameController : MonoBehaviour {
 
+    public GameObject SceneTransitionImage;
     public GameObject ThisIsYouText, ThisIsYouArrow, YourHomeText, YourHomeArrow, MeteorText, MeteorArrow, RebuildText;
 
     public GameObject FirstLevelPlayer;
@@ -178,6 +180,8 @@ public class GameController : MonoBehaviour {
 
                 if (ActiveGrid.CheckComplete()) {
                     PlaceCivsOnPiece(ActiveGrid.Pieces[1, 1]);
+
+                    StartCoroutine(SceneTransition());
 
                     _gameStarted = false;
                 } else {
@@ -438,5 +442,36 @@ public class GameController : MonoBehaviour {
         _meteor = Instantiate(PrefabManager.GetPrefab(PrefabManager.PrefabType.Meteor)).GetComponent<MeteorController>();
 
         StartCoroutine(MeteorPause());
+    }
+
+    private IEnumerator SceneTransition() {
+        float baseTimer = 1f;
+        float timer = baseTimer;
+
+        yield return new WaitForSeconds(2f);
+
+        Image image = SceneTransitionImage.GetComponent<Image>();
+        Color startColor = image.color;
+        Color targetColor = image.color;
+        startColor.a = 0f;
+
+        SceneTransitionImage.SetActive(true);
+
+        while(timer > 0f) {
+
+            image.color = Color.Lerp(startColor, targetColor, (baseTimer - timer) / baseTimer);
+
+            timer -= Time.deltaTime;
+
+            yield return null;
+        }
+
+        image.color = targetColor;
+
+        if (SceneManager.GetActiveScene().buildIndex == 2) {
+            SceneManager.LoadScene(0);
+        } else {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
+        }
     }
 }
